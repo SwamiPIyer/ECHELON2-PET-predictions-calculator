@@ -1,4 +1,4 @@
-# ECHELON-2 Clinical Decision Dashboard
+# ECHELON-2 based Clinical Decision Dashboard
 
 An evidence-based clinical decision support tool for peripheral T-cell lymphoma (PTCL) treatment selection, risk assessment, and PET response prediction based on the ECHELON-2 trial data.
 
