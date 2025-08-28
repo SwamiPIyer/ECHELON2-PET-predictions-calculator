@@ -72,22 +72,8 @@ All calculations and predictions are based on peer-reviewed clinical trial data:
 ## Limitations
 
 - Predictions based on clinical trial populations which may not represent all real-world patients
-- AITL patients showed limited benefit and should be counseled accordingly
 - Individual patient outcomes may vary from population-based predictions
 - Tool intended for clinical decision support, not replacement of clinical judgment
-
-## Installation
-
-### GitHub Pages Deployment
-1. Fork this repository
-2. Go to Settings → Pages
-3. Select "Deploy from a branch" and choose `main` branch
-4. Your dashboard will be available at `https://yourusername.github.io/repository-name`
-
-### Local Usage
-1. Download the `index.html` file
-2. Open in any modern web browser
-3. No server or additional setup required
 
 ## Contributing
 
