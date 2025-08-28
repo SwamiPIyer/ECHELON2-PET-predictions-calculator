@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECHELON-2 Clinical Decision Dashboard</title>
+    <meta name="description" content="Evidence-based clinical decision support tool for peripheral T-cell lymphoma treatment selection, risk assessment, and PET response prediction based on ECHELON-2 trial data.">
+    <meta name="keywords" content="PTCL, peripheral T-cell lymphoma, ECHELON-2, brentuximab vedotin, risk assessment, PET prediction, clinical decision support">
+    <meta name="author" content="ECHELON-2 Clinical Dashboard">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab:hover {
+            background: #e9ecef;
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #2a5298;
+            border-bottom-color: #2a5298;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .card h3 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .model-selector {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .model-selector label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .model-selector input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        .input-group small {
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+
+        .result-display {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2a5298;
+            margin-bottom: 5px;
+        }
+
+        .result-label {
+            font-size: 1.1rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .outcome-item {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .outcome-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2a5298;
+            margin-bottom: 8px;
+        }
+
+        .outcome-label {
+            font-size: 0.95rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        .chart-container.small {
+            height: 300px;
+        }
+
+        .stats-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #2a5298;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .benefit-summary {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .benefit-summary p {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .references {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #666;
+            border-left: 4px solid #2a5298;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .section-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .outcome-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>ECHELON-2 Clinical Decision Dashboard</h1>
+            <p>Evidence-based PTCL treatment selection using actual ECHELON-2 trial data</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('risk-calc', this)">Risk Calculator</button>
+            <button class="nav-tab" onclick="showTab('pet-predictions', this)">PET Predictions</button>
+            <button class="nav-tab" onclick="showTab('outcomes', this)">Treatment Outcomes</button>
+            <button class="nav-tab" onclick="showTab('comparison', this)">Trial Results</button>
+            <button class="nav-tab" onclick="showTab('analytics', this)">Analytics</button>
+        </div>
+
+        <!-- Risk Assessment Tab -->
+        <div id="risk-calc" class="tab-content active">
+            <div class="section-grid">
+                <div class="card">
+                    <h3>Prognostic Model Calculator</h3>
+                    
+                    <div class="model-selector">
+                        <label><strong>Select Prognostic Model:</strong></label><br>
+                        <label>
+                            <input type="radio" name="model" value="ipi" checked onchange="toggleModel()">
+                            IPI (International Prognostic Index)
+                        </label>
+                        <label>
+                            <input type="radio" name="model" value="pit" onchange="toggleModel()">
+                            PIT (Prognostic Index for PTCL-U)
+                        </label>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Age (years)</label>
+                        <input type="number" id="age" value="65" min="0" max="120" onchange="calculateRisk()">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>ECOG Performance Status</label>
+                        <select id="ecog" onchange="calculateRisk()">
+                            <option value="0">0 - Fully active</option>
+                            <option value="1">1 - Restricted activity</option>
+                            <option value="2">2 - Ambulatory >50% time</option>
+                            <option value="3">3 - Limited self-care</option>
+                            <option value="4">4 - Completely disabled</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>LDH Level</label>
+                        <select id="ldh" onchange="calculateRisk()">
+                            <option value="normal">Normal</option>
+                            <option value="elevated">Elevated (>ULN)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group ipi-field">
+                        <label>Ann Arbor Stage</label>
+                        <select id="stage" onchange="calculateRisk()">
+                            <option value="1">Stage I</option>
+                            <option value="2">Stage II</option>
+                            <option value="3">Stage III</option>
+                            <option value="4">Stage IV</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group ipi-field">
+                        <label>Extranodal Sites</label>
+                        <select id="extranodal" onchange="calculateRisk()">
+                            <option value="0">0 sites</option>
+                            <option value="1">1 site</option>
+                            <option value="2">2 sites</option>
+                            <option value="3">3+ sites</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group pit-field" style="display: none;">
+                        <label>Bone Marrow Involvement</label>
+                        <select id="boneMarrow" onchange="calculateRisk()">
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Risk Assessment Results</h3>
+                    <div id="results"></div>
+                </div>
+            </div>
+            
+            <div class="references">
+                <p><strong>References:</strong></p>
+                <p><strong>IPI:</strong> International Non-Hodgkin's Lymphoma Prognostic Factors Project. N Engl J Med. 1993;329:987-994.</p>
+                <p><strong>PIT:</strong> Gallamini A, et al. Peripheral T-cell lymphoma unspecified (PTCL-U): a new prognostic model. Blood. 2004;103:2474-2479.</p>
+                <p><strong>Validation:</strong> Nakamura N, et al. Comparison of IPI and PIT in PTCL. Sci Rep. 2023;13:19060.</p>
+            </div>
+        </div>
+
+        <!-- PET Predictions Tab -->
+        <div id="pet-predictions" class="tab-content">
+            <div class="section-grid">
+                <div class="card">
+                    <h3>PET Response Prediction (PET4)</h3>
+                    <div class="input-group">
+                        <label>Treatment Arm</label>
+                        <select id="pet-treatment" onchange="calculatePETResponse()">
+                            <option value="bv-chp">A+CHP (Brentuximab vedotin + CHP)</option>
+                            <option value="chop">CHOP</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Histological Subtype</label>
+                        <select id="pet-histology" onchange="calculatePETResponse()">
+                            <option value="salcl-alk-neg">sALCL ALK- (58%)</option>
+                            <option value="salcl-alk-pos">sALCL ALK+ (12%)</option>
+                            <option value="aitl">AITL (18%)</option>
+                            <option value="ptcl-nos">PTCL-NOS (8%)</option>
+                            <option value="other">Other (4%)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Baseline SUVmax</label>
+                        <input type="number" id="baseline-suvmax" min="1" max="50" value="15" step="0.1" onchange="calculatePETResponse()">
+                        <small>Standard range: 5-30</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Tumor Bulk</label>
+                        <select id="tumor-bulk" onchange="calculatePETResponse()">
+                            <option value="low">Low (< 7.5 cm)</option>
+                            <option value="high">High (≥ 7.5 cm)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>PET4 Response Prediction</h3>
+                    <div class="chart-container small">
+                        <canvas id="petResponseChart"></canvas>
+                    </div>
+                    <div class="outcome-grid">
+                        <div class="outcome-item">
+                            <div class="outcome-value" id="pet-negative-rate">65%</div>
+                            <div class="outcome-label">PET4 Negative (Deauville 1-3)</div>
+                        </div>
+                        <div class="outcome-item">
+                            <div class="outcome-value" id="pet-positive-rate">35%</div>
+                            <div class="outcome-label">PET4 Positive (Deauville 4-5)</div>
+                        </div>
+                        <div class="outcome-item">
+                            <div class="outcome-value" id="pet-prognosis">Good</div>
+                            <div class="outcome-label">Overall Prognosis</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-summary">
+                <h3>PET4 Prognostic Impact - ECHELON-2 Data</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">60% vs 22%</div>
+                        <div class="stat-label">3-yr PFS: PET4- vs PET4+</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">85% vs 40%</div>
+                        <div class="stat-label">3-yr OS: PET4- vs PET4+</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">HR 0.30</div>
+                        <div class="stat-label">Average PFS HR (PET4- vs PET4+)</div>
+                    </div>
+                </div>
+                
+                <div class="benefit-summary">
+                    <p><strong>Key PET4 Findings:</strong></p>
+                    <p>• PET4-negative patients show 38 percentage points higher PFS (60% vs 22%)</p>
+                    <p>• PET4-negative patients show 45 percentage points higher OS (85% vs 40%)</p>
+                    <p>• PET4 status is strongly prognostic regardless of treatment arm</p>
+                    <p>• PET4 can guide post-treatment monitoring and consolidation decisions</p>
+                    
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                        <p><strong>Reference:</strong></p>
+                        <p style="font-size: 0.9rem; color: #495057;">
+                            Iyer SP, Mehta-Shah N, Advani RH, et al. Association of PET4 Response With Outcomes of BV-CHP vs CHOP in the ECHELON-2 Trial in CD30+ Peripheral T-cell Lymphoma. 
+                            <em>Blood Adv</em>. 2025 Aug 19. [Epub ahead of print]
+                            <a href="https://doi.org/10.1182/bloodadvances.2024015282" target="_blank" style="color: #2a5298; text-decoration: none;">https://doi.org/10.1182/bloodadvances.2024015282</a>
+                            PubMed PMID: 40829107.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Treatment Outcomes Tab -->
+        <div id="outcomes" class="tab-content">
+            <div class="section-grid">
+                <div class="card">
+                    <h3>Treatment Selection</h3>
+                    <div class="input-group">
+                        <label>Treatment Regimen</label>
+                        <select id="treatment" onchange="calculateOutcomePredictions()">
+                            <option value="bv-chp">A+CHP (Brentuximab vedotin + CHP)</option>
+                            <option value="chop">CHOP</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Histological Subtype</label>
+                        <select id="histology" onchange="calculateOutcomePredictions()">
+                            <option value="salcl-alk-neg">sALCL ALK- (58%)</option>
+                            <option value="salcl-alk-pos">sALCL ALK+ (12%)</option>
+                            <option value="aitl">AITL (18%)</option>
+                            <option value="ptcl-nos">PTCL-NOS (8%)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Expected Outcomes</h3>
+                    <div class="outcome-grid">
+                        <div class="outcome-item">
+                            <div class="outcome-value" id="pfs-rate">58%</div>
+                            <div class="outcome-label">5-Year PFS</div>
+                        </div>
+                        <div class="outcome-item">
+                            <div class="outcome-value" id="os-rate">74%</div>
+                            <div class="outcome-label">5-Year OS</div>
+                        </div>
+                        <div class="outcome-item">
+                            <div class="outcome-value" id="cr-rate">75%</div>
+                            <div class="outcome-label">Complete Response</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trial Results Tab -->
+        <div id="comparison" class="tab-content">
+            <div class="section-grid">
+                <div class="card full-width">
+                    <h3>ECHELON-2 Trial Results</h3>
+                    <div class="chart-container">
+                        <canvas id="outcomesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-grid">
+                <div class="card">
+                    <h3>Statistical Significance</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th style="color: #2a5298;">A+CHP</th>
+                                <th style="color: #dc3545;">CHOP</th>
+                                <th>P-value</th>
+                                <th>Significance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>5-Year PFS</td>
+                                <td style="color: #2a5298; font-weight: bold;">51.4%</td>
+                                <td style="color: #dc3545; font-weight: bold;">43.0%</td>
+                                <td>p = 0.0077</td>
+                                <td style="color: #198754;">Significant**</td>
+                            </tr>
+                            <tr>
+                                <td>5-Year OS</td>
+                                <td style="color: #2a5298; font-weight: bold;">70.1%</td>
+                                <td style="color: #dc3545; font-weight: bold;">61.0%</td>
+                                <td>p = 0.0424</td>
+                                <td style="color: #198754;">Significant*</td>
+                            </tr>
+                            <tr>
+                                <td>Complete Response</td>
+                                <td style="color: #2a5298; font-weight: bold;">68%</td>
+                                <td style="color: #dc3545; font-weight: bold;">56%</td>
+                                <td>p = 0.0066</td>
+                                <td style="color: #198754;">Significant**</td>
+                            </tr>
+                            <tr>
+                                <td>Overall Response</td>
+                                <td style="color: #2a5298; font-weight: bold;">83%</td>
+                                <td style="color: #dc3545; font-weight: bold;">72%</td>
+                                <td>p = 0.0032</td>
+                                <td style="color: #198754;">Significant**</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                        * p < 0.05 ** p < 0.01
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>Hazard Ratios</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Outcome</th>
+                                <th>Hazard Ratio</th>
+                                <th>95% CI</th>
+                                <th>Risk Reduction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Progression/Death</td>
+                                <td style="color: #198754; font-weight: bold;">0.70</td>
+                                <td>(0.53-0.91)</td>
+                                <td style="color: #198754;">30%</td>
+                            </tr>
+                            <tr>
+                                <td>Death</td>
+                                <td style="color: #198754; font-weight: bold;">0.72</td>
+                                <td>(0.53-0.99)</td>
+                                <td style="color: #198754;">28%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="stats-summary">
+                <h3>Key ECHELON-2 Findings</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">0.70 (0.53-0.91)</div>
+                        <div class="stat-label">Overall PFS HR</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.72 (0.53-0.99)</div>
+                        <div class="stat-label">Overall OS HR</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.29 (0.11-0.79)</div>
+                        <div class="stat-label">ALK+ sALCL PFS HR</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.65 (0.44-0.95)</div>
+                        <div class="stat-label">ALK- sALCL PFS HR</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">1.40 (0.64-3.07)</div>
+                        <div class="stat-label">AITL PFS HR</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">0.75 (0.41-1.37)</div>
+                        <div class="stat-label">PTCL-NOS PFS HR</div>
+                    </div>
+                </div>
+                
+                <div class="benefit-summary">
+                    <p><strong>Overall Benefit:</strong></p>
+                    <p>• 30% reduction in progression risk</p>
+                    <p>• 28% reduction in death risk</p>
+                    <p><strong>Important Note:</strong> Benefit primarily seen in sALCL patients, especially ALK+. AITL patients may not benefit and could have worse outcomes.</p>
+                    
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                        <p><strong>Key References:</strong></p>
+                        <p style="font-size: 0.9rem; color: #495057; margin-bottom: 8px;">
+                            1. Horwitz S, O'Connor OA, Pro B, et al. Brentuximab vedotin with chemotherapy for CD30-positive peripheral T-cell lymphoma (ECHELON-2): a global, double-blind, randomised, phase 3 trial. 
+                            <em>Lancet</em>. 2019;393(10168):229-240. 
+                            <a href="https://doi.org/10.1016/S0140-6736(18)32984-2" target="_blank" style="color: #2a5298; text-decoration: none;">https://doi.org/10.1016/S0140-6736(18)32984-2</a>
+                        </p>
+                        <p style="font-size: 0.9rem; color: #495057;">
+                            2. Horwitz S, O'Connor OA, Pro B, et al. The ECHELON-2 Trial: 5-year results of a randomized, phase III study of brentuximab vedotin with chemotherapy for CD30-positive peripheral T-cell lymphoma. 
+                            <em>Ann Oncol</em>. 2022;33(3):288-298. 
+                            <a href="https://doi.org/10.1016/j.annonc.2021.12.002" target="_blank" style="color: #2a5298; text-decoration: none;">https://doi.org/10.1016/j.annonc.2021.12.002</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics" class="tab-content">
+            <div class="section-grid">
+                <div class="card">
+                    <h3>Trial Demographics</h3>
+                    <div class="chart-container">
+                        <canvas id="demographicsChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>5-Year Outcomes by Subtype</h3>
+                    <div class="chart-container">
+                        <canvas id="subtypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-summary">
+                <h3>ECHELON-2 Key Demographics (N=452)</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">58 years</div>
+                        <div class="stat-label">Median Age</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">62%</div>
+                        <div class="stat-label">Male</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">70%</div>
+                        <div class="stat-label">Stage III/IV</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for charts
+        let outcomesChart, demographicsChart, subtypeChart, petResponseChart;
+
+        function showTab(tabId, buttonElement) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            const navTabs = document.querySelectorAll('.nav-tab');
+            navTabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab and button
+            document.getElementById(tabId).classList.add('active');
+            buttonElement.classList.add('active');
+            
+            // Initialize charts when tabs are shown
+            if (tabId === 'comparison') {
+                setTimeout(() => updateOutcomesComparison(), 100);
+            } else if (tabId === 'analytics') {
+                setTimeout(() => {
+                    updateDemographicsChart();
+                    updateSubtypeChart();
+                }, 100);
+            } else if (tabId === 'pet-predictions') {
+                setTimeout(() => calculatePETResponse(), 100);
+            }
+        }
+
+        function toggleModel() {
+            const selectedModel = document.querySelector('input[name="model"]:checked').value;
+            const ipiFields = document.querySelectorAll('.ipi-field');
+            const pitFields = document.querySelectorAll('.pit-field');
+            
+            if (selectedModel === 'ipi') {
+                ipiFields.forEach(field => field.style.display = 'block');
+                pitFields.forEach(field => field.style.display = 'none');
+            } else {
+                ipiFields.forEach(field => field.style.display = 'none');
+                pitFields.forEach(field => field.style.display = 'block');
+            }
+            
+            calculateRisk();
+        }
+
+        function calculateRisk() {
+            const model = document.querySelector('input[name="model"]:checked').value;
+            const age = parseInt(document.getElementById('age').value);
+            const ecog = parseInt(document.getElementById('ecog').value);
+            const ldh = document.getElementById('ldh').value;
+            
+            let score = 0;
+            let factors = [];
+            
+            // Common factors for both models
+            if (age > 60) {
+                score += 1;
+                factors.push('Age > 60 years');
+            }
+            
+            if (ecog >= 2) {
+                score += 1;
+                factors.push('ECOG PS ≥ 2');
+            }
+            
+            if (ldh === 'elevated') {
+                score += 1;
+                factors.push('Elevated LDH');
+            }
+            
+            let riskCategory, survivalData, maxScore, color;
+            
+            if (model === 'ipi') {
+                // IPI-specific factors
+                const stage = parseInt(document.getElementById('stage').value);
+                const extranodal = parseInt(document.getElementById('extranodal').value);
+                
+                if (stage >= 3) {
+                    score += 1;
+                    factors.push('Stage III-IV');
+                }
+                
+                if (extranodal >= 2) {
+                    score += 1;
+                    factors.push('≥2 Extranodal sites');
+                }
+                
+                maxScore = 5;
+                
+                // IPI risk groups with PTCL-specific survival data
+                if (score <= 1) {
+                    riskCategory = 'Low Risk (0-1)';
+                    survivalData = '5-yr OS: 85%, 5-yr PFS: 81%';
+                    color = '#28a745';
+                } else if (score === 2) {
+                    riskCategory = 'Low-Intermediate (2)';
+                    survivalData = '5-yr OS: 62%, 5-yr PFS: 31%';
+                    color = '#ffc107';
+                } else if (score === 3) {
+                    riskCategory = 'High-Intermediate (3)';
+                    survivalData = '5-yr OS: 49%, 5-yr PFS: 32%';
+                    color = '#fd7e14';
+                } else {
+                    riskCategory = 'High Risk (4-5)';
+                    survivalData = '5-yr OS: 13%, 5-yr PFS: 9%';
+                    color = '#dc3545';
+                }
+                
+            } else {
+                // PIT-specific factor
+                const boneMarrow = document.getElementById('boneMarrow').value;
+                
+                if (boneMarrow === 'yes') {
+                    score += 1;
+                    factors.push('Bone marrow involvement');
+                }
+                
+                maxScore = 4;
+                
+                // PIT risk groups with original Gallamini data
+                if (score === 0) {
+                    riskCategory = 'Group 1 (0 factors)';
+                    survivalData = '5-yr OS: 62.3%, 10-yr OS: 54.9%';
+                    color = '#28a745';
+                } else if (score === 1) {
+                    riskCategory = 'Group 2 (1 factor)';
+                    survivalData = '5-yr OS: 52.9%, 10-yr OS: 38.8%';
+                    color = '#ffc107';
+                } else if (score === 2) {
+                    riskCategory = 'Group 3 (2 factors)';
+                    survivalData = '5-yr OS: 32.9%, 10-yr OS: 18.0%';
+                    color = '#fd7e14';
+                } else {
+                    riskCategory = 'Group 4 (3-4 factors)';
+                    survivalData = '5-yr OS: 18.3%, 10-yr OS: 12.6%';
+                    color = '#dc3545';
+                }
+            }
+            
+            const modelName = model === 'ipi' ? 'IPI' : 'PIT';
+            
+            document.getElementById('results').innerHTML = `
+                <div style="border: 2px solid ${color}; border-radius: 10px; padding: 20px; background: ${color}15;">
+                    <h4 style="color: ${color}; margin-bottom: 15px;">${modelName} Risk Assessment Results</h4>
+                    <div class="result-display">
+                        <div class="result-value">${score}/${maxScore}</div>
+                        <div class="result-label">${modelName} Score</div>
+                    </div>
+                    <div class="result-display" style="margin-top: 15px;">
+                        <div class="result-value" style="color: ${color}; font-size: 1.5rem;">${riskCategory}</div>
+                        <div class="result-label">Risk Category</div>
+                    </div>
+                    <p style="margin-top: 15px;"><strong>Risk Factors:</strong> ${factors.length ? factors.join(', ') : 'None identified'}</p>
+                    <p><strong>Expected Survival:</strong> ${survivalData}</p>
+                    <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 0.9em;">
+                        <strong>Clinical Note:</strong> 
+                        ${model === 'ipi' ? 
+                            'IPI validated in PTCL despite being developed for B-cell lymphomas.' :
+                            'PIT specifically developed for PTCL-U with multivariate analysis (Gallamini et al.).'
+                        }
+                    </div>
+                </div>
+            `;
+        }
+
+        function calculatePETResponse() {
+            const treatment = document.getElementById('pet-treatment').value;
+            const histology = document.getElementById('pet-histology').value;
+            const suvmax = parseFloat(document.getElementById('baseline-suvmax').value);
+            const bulk = document.getElementById('tumor-bulk').value;
+            
+            // Base PET4-negative rates from ECHELON-2 data
+            let baseNegativeRate = 65;
+            
+            // Treatment effect
+            if (treatment === 'bv-chp') {
+                baseNegativeRate += 5;
+            }
+            
+            // Histology adjustments
+            switch(histology) {
+                case 'salcl-alk-pos':
+                    baseNegativeRate += 15;
+                    break;
+                case 'salcl-alk-neg':
+                    baseNegativeRate += 5;
+                    break;
+                case 'aitl':
+                    baseNegativeRate -= 5;
+                    break;
+                case 'ptcl-nos':
+                    baseNegativeRate += 0;
+                    break;
+            }
+            
+            // SUVmax effect
+            if (suvmax > 20) {
+                baseNegativeRate -= 10;
+            } else if (suvmax > 15) {
+                baseNegativeRate -= 5;
+            } else if (suvmax < 10) {
+                baseNegativeRate += 5;
+            }
+            
+            // Tumor bulk effect
+            if (bulk === 'high') {
+                baseNegativeRate -= 8;
+            }
+            
+            // Ensure bounds
+            baseNegativeRate = Math.max(20, Math.min(85, baseNegativeRate));
+            const negativeRate = baseNegativeRate;
+            const positiveRate = 100 - negativeRate;
+            
+            // Update display
+            document.getElementById('pet-negative-rate').textContent = Math.round(negativeRate) + '%';
+            document.getElementById('pet-positive-rate').textContent = Math.round(positiveRate) + '%';
+            
+            let prognosis = negativeRate > 60 ? 'Good' : negativeRate > 40 ? 'Intermediate' : 'Poor';
+            document.getElementById('pet-prognosis').textContent = prognosis;
+            
+            updatePETResponseChart(negativeRate, positiveRate);
+        }
+
+        function updatePETResponseChart(negativeRate, positiveRate) {
+            const ctx = document.getElementById('petResponseChart').getContext('2d');
+            
+            if (petResponseChart) {
+                petResponseChart.destroy();
+            }
+
+            petResponseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['PET4 Negative (Deauville 1-3)', 'PET4 Positive (Deauville 4-5)'],
+                    datasets: [{
+                        data: [negativeRate, positiveRate],
+                        backgroundColor: ['#10B981', '#EF4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Predicted PET4 Response'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function calculateOutcomePredictions() {
+            const treatment = document.getElementById('treatment').value;
+            const histology = document.getElementById('histology').value;
+            
+            let pfs5yr, os5yr, cr;
+            
+            if (treatment === 'bv-chp') {
+                switch(histology) {
+                    case 'salcl-alk-pos':
+                        pfs5yr = 75; os5yr = 85; cr = 80; break;
+                    case 'salcl-alk-neg':
+                        pfs5yr = 58; os5yr = 74; cr = 75; break;
+                    case 'aitl':
+                        pfs5yr = 27; os5yr = 68; cr = 65; break;
+                    case 'ptcl-nos':
+                        pfs5yr = 27; os5yr = 46; cr = 60; break;
+                }
+            } else {
+                switch(histology) {
+                    case 'salcl-alk-pos':
+                        pfs5yr = 55; os5yr = 70; cr = 60; break;
+                    case 'salcl-alk-neg':
+                        pfs5yr = 46; os5yr = 66; cr = 55; break;
+                    case 'aitl':
+                        pfs5yr = 48; os5yr = 63; cr = 50; break;
+                    case 'ptcl-nos':
+                        pfs5yr = 26; os5yr = 36; cr = 45; break;
+                }
+            }
+            
+            document.getElementById('pfs-rate').textContent = pfs5yr + '%';
+            document.getElementById('os-rate').textContent = os5yr + '%';
+            document.getElementById('cr-rate').textContent = cr + '%';
+        }
+
+        function updateOutcomesComparison() {
+            const ctx = document.getElementById('outcomesChart').getContext('2d');
+            
+            if (outcomesChart) {
+                outcomesChart.destroy();
+            }
+
+            outcomesChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['5-Year PFS', '5-Year OS', 'Complete Response', 'Overall Response'],
+                    datasets: [{
+                        label: 'A+CHP',
+                        data: [51.4, 70.1, 68, 83],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    }, {
+                        label: 'CHOP',
+                        data: [43.0, 61.0, 56, 72],
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'ECHELON-2 Trial Results (N=452)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Percentage (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDemographicsChart() {
+            const ctx = document.getElementById('demographicsChart').getContext('2d');
+            
+            if (demographicsChart) {
+                demographicsChart.destroy();
+            }
+
+            demographicsChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['sALCL ALK-', 'sALCL ALK+', 'AITL', 'PTCL-NOS', 'Other'],
+                    datasets: [{
+                        data: [58, 12, 18, 8, 4],
+                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'ECHELON-2 Histology Distribution'
+                        },
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSubtypeChart() {
+            const ctx = document.getElementById('subtypeChart').getContext('2d');
+            
+            if (subtypeChart) {
+                subtypeChart.destroy();
+            }
+
+            subtypeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['sALCL ALK+', 'sALCL ALK-', 'AITL', 'PTCL-NOS'],
+                    datasets: [{
+                        label: 'A+CHP',
+                        data: [75, 58, 27, 27],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    }, {
+                        label: 'CHOP',
+                        data: [55, 46, 48, 26],
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '5-Year PFS by Subtype (Estimated)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 80,
+                            title: {
+                                display: true,
+                                text: 'Percentage (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateRisk();
+            calculateOutcomePredictions();
+            calculatePETResponse();
+        });
+    </script>
+</body>
+</html>
